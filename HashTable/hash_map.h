@@ -11,7 +11,6 @@ public:
         : elements()
         , buckets()
         , count_elements(0)
-        , count_buckets(0)
         , hasher(custom_hasher)
     {}
 
@@ -44,10 +43,9 @@ public:
             return *this;
         }
         count_elements = other.count_elements;
-        count_buckets = other.count_buckets;
         elements.clear();
-        buckets.assign(count_buckets, std::make_pair(elements.end(), elements.end()));
-        for (size_t curr_hash = 0; curr_hash < count_buckets; ++curr_hash) {
+        buckets.assign(other.buckets.size(), std::make_pair(elements.end(), elements.end()));
+        for (size_t curr_hash = 0; curr_hash < buckets.size(); ++curr_hash) {
             auto it = other.buckets[curr_hash].first;
             if (it != other.elements.end()) {
                 elements.push_front(*it);
@@ -76,16 +74,15 @@ public:
 
     void clear() {
         count_elements = 0;
-        count_buckets = 0;
         elements.clear();
         buckets.clear();
     }
 
     void erase(const KeyType& key) {
-        if (count_buckets == 0) {
+        if (buckets.empty()) {
             return;
         }
-        size_t num = hasher(key) % count_buckets;
+        size_t num = hasher(key) % buckets.size();
         if (buckets[num].first == elements.end()) {
             return;
         }
@@ -124,7 +121,6 @@ public:
         }
         swap(new_buckets, buckets);
         swap(new_elements, elements);
-        count_buckets = new_size;
     }
 
     class iterator {
@@ -239,10 +235,10 @@ public:
     };
 
     iterator find(const KeyType& key) {
-        if (count_buckets == 0) {
+        if (buckets.empty()) {
             return end();
         }
-        size_t num = hasher(key) % count_buckets;
+        size_t num = hasher(key) % buckets.size();
         for (auto it = buckets[num].first; it != buckets[num].second; ++it) {
             if (it->first == key) {
                 return iterator(it);
@@ -255,10 +251,10 @@ public:
     }
 
     const_iterator find(const KeyType& key) const {
-        if (count_buckets == 0) {
+        if (buckets.empty()) {
             return end();
         }
-        size_t num = hasher(key) % count_buckets;
+        size_t num = hasher(key) % buckets.size();
         if (buckets[num].first == elements.end()) {
             return end();
         }
@@ -319,16 +315,15 @@ private:
     std::list<std::pair<const KeyType, ValueType>> elements;
     std::vector<std::pair<typename decltype(elements)::iterator, typename decltype(elements)::iterator>> buckets;
     size_t count_elements;
-    size_t count_buckets;
     Hash hasher;
     static constexpr float maxLoadFactor = 0.75;
 
     iterator insert_skipping_check(const std::pair<const KeyType, ValueType>& element) {
         ++count_elements;
-        if (count_elements > maxLoadFactor * count_buckets) {
-            increase_size(2 * count_buckets + (count_buckets == 0));
+        if (count_elements > maxLoadFactor * buckets.size()) {
+            increase_size(2 * buckets.size() + buckets.empty());
         }
-        size_t num = hasher(element.first) % count_buckets;
+        size_t num = hasher(element.first) % buckets.size();
         if (buckets[num].first == elements.end()) {
             elements.push_front(element);
             buckets[num].second = elements.begin();

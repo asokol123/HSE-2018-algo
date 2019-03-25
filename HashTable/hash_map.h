@@ -36,18 +36,28 @@ public:
     HashMap(const HashMap& other)
         : HashMap(other.hasher)
     {
-        for (const auto& elem : other) {
-            insert(elem);
-        }
+        *this = other;
     }
 
     HashMap& operator = (const HashMap& other) {
         if (this == &other) {
             return *this;
         }
-        clear();
-        for (const auto& x : other) {
-            insert(x);
+        count_elements = other.count_elements;
+        count_buckets = other.count_buckets;
+        elements.clear();
+        buckets.assign(count_buckets, std::make_pair(elements.end(), elements.end()));
+        for (size_t curr_hash = 0; curr_hash < count_buckets; ++curr_hash) {
+            auto it = other.buckets[curr_hash].first;
+            if (it != other.elements.end()) {
+                elements.push_front(*it);
+                buckets[curr_hash].first = elements.begin();
+                while (it != other.buckets[curr_hash].second) {
+                    ++it;
+                    elements.push_front(*it);
+                }
+                buckets[curr_hash].second = elements.begin();
+            }
         }
         return *this;
     }

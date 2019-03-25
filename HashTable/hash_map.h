@@ -79,39 +79,30 @@ public:
         if (buckets[num].first == elements.end()) {
             return;
         }
-        for (auto it = buckets[num].first; it != buckets[num].second; ++it) {
+        auto it = buckets[num].first;
+        while (it != buckets[num].second && it->first != key) {
+            ++it;
+        }
+        if (it->first == key) {
             if (it == buckets[num].first) {
-                continue;
+                if (it == buckets[num].second) {
+                    buckets[num].first = elements.end();
+                    buckets[num].second = elements.end();
+                } else {
+                    ++buckets[num].first;
+                }
+            } else if (it == buckets[num].second) {
+                --buckets[num].second;
             }
-            if (it->first == key) {
-                elements.erase(it);
-                --count_elements;
-                return;
-            }
-        }
-        if (buckets[num].first->first == key) {
-            if (buckets[num].first == buckets[num].second) {
-                --count_elements;
-                elements.erase(buckets[num].first);
-                buckets[num].first = buckets[num].second = elements.end();
-                return;
-            } else {
-                --count_elements;
-                elements.erase(buckets[num].first++);
-                return;
-            }
-        }
-        if (buckets[num].second->first == key) {
             --count_elements;
-            elements.erase(buckets[num].second--);
-            return;
+            elements.erase(it);
         }
     }
 
     void increase_size(size_t new_size) {
         decltype(elements) new_elements;
         decltype(buckets) new_buckets(new_size, std::make_pair(elements.end(), elements.end()));
-        for (const std::pair<const KeyType, ValueType>& element : *this) {
+        for (const std::pair<const KeyType, ValueType>& element : elements) {
             size_t num = hasher(element.first) % new_size;
             if (new_buckets[num].first == elements.end()) {
                 new_elements.push_front(element);
@@ -320,7 +311,7 @@ private:
     size_t count_elements;
     size_t count_buckets;
     Hash hasher;
-    float maxLoadFactor = 0.75;
+    static constexpr float maxLoadFactor = 0.75;
 
     iterator insert_skipping_check(const std::pair<const KeyType, ValueType>& element) {
         ++count_elements;
